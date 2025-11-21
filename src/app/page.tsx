@@ -209,21 +209,42 @@ export default function LumiApp() {
         }),
       });
 
+      // Verificar Content-Type da resposta
+      const contentType = response.headers.get("content-type");
+      
       if (!response.ok) {
-        const errorText = await response.text();
         let errorMessage = "Erro ao processar mensagem";
         
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          // Se não for JSON, use mensagem genérica
+        // Se a resposta for JSON, tenta extrair a mensagem de erro
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (jsonError) {
+            console.error("Erro ao fazer parse do JSON de erro:", jsonError);
+          }
+        } else {
+          // Se não for JSON (ex: HTML de erro 500), mostra mensagem genérica
+          const errorText = await response.text();
+          console.error("Resposta não-JSON da API:", errorText.substring(0, 200));
+          
           if (response.status === 500) {
-            errorMessage = "Configure a variável OPENAI_API_KEY nas configurações do projeto para usar a Lumi.";
+            errorMessage = "Erro no servidor. Verifique se a variável OPENAI_API_KEY está configurada corretamente.";
+          } else if (response.status === 404) {
+            errorMessage = "Rota da API não encontrada. Verifique se /api/chat existe.";
+          } else {
+            errorMessage = `Erro ${response.status}: O servidor retornou uma resposta inválida.`;
           }
         }
         
         throw new Error(errorMessage);
+      }
+
+      // Verificar se a resposta de sucesso é JSON
+      if (!contentType || !contentType.includes("application/json")) {
+        const responseText = await response.text();
+        console.error("Resposta de sucesso não é JSON:", responseText.substring(0, 200));
+        throw new Error("A API retornou uma resposta inválida (não é JSON). Verifique os logs do servidor.");
       }
 
       const data = await response.json();
