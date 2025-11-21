@@ -134,7 +134,9 @@ ABORDAGEM:
 5. Foque em bem-estar integral`,
 };
 
-const BASE_PROMPT = `Você é a Lumi, uma assistente inteligente brasileira que acompanha o cotidiano das pessoas.
+// Prompt base configurável via variável de ambiente
+const getBasePrompt = () => {
+  return process.env.BASE_PROMPT || `Você é a Lumi, uma assistente inteligente brasileira que acompanha o cotidiano das pessoas.
 
 PERSONALIDADE:
 - Amigável, empática e profissional
@@ -156,6 +158,7 @@ FORMATO DE RESPOSTA:
 - Use negrito para destacar pontos importantes
 - Seja clara sobre próximos passos
 - Ofereça sugestões proativas`;
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -180,14 +183,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Selecionar o prompt baseado no pilar
+    const basePrompt = getBasePrompt();
     const pillarPrompt = pillar && PILLAR_PROMPTS[pillar as keyof typeof PILLAR_PROMPTS]
       ? PILLAR_PROMPTS[pillar as keyof typeof PILLAR_PROMPTS]
-      : BASE_PROMPT;
+      : basePrompt;
 
     // Criar mensagem de sistema com contexto do pilar
     const systemMessage = {
       role: 'system' as const,
-      content: `${pillarPrompt}\n\n${BASE_PROMPT}`,
+      content: `${pillarPrompt}\n\n${basePrompt}`,
     };
 
     // Fazer chamada para OpenAI
